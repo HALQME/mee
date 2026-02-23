@@ -1,0 +1,7 @@
+{
+  "name": "rpn",
+  "version": "1.0.0",
+  "trigger": "",
+  "script": "rpn.go",
+  "description": "Reverse Polish Notation Calculator"
+}
