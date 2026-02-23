@@ -29,9 +29,14 @@ type Manifest struct {
 type Plugin struct {
 	Manifest Manifest
 	Path     string
-	interp   *interp.Interpreter
-	searchFn func(string) string
-	trigger  string
+
+	// Lazy loading fields - interpreter is initialized on first Search()
+	interp      *interp.Interpreter
+	searchFn    func(string) string
+	trigger     string
+	scriptPath  string
+	initialized bool
+	mu          sync.RWMutex
 }
 
 // Name returns the provider name.
@@ -46,6 +51,10 @@ func (p *Plugin) Trigger() string {
 
 // Search implements provider.Provider.
 func (p *Plugin) Search(query string) (*provider.ResultSet, error) {
+	if err := p.ensureInitialized(); err != nil {
+		return nil, err
+	}
+
 	if p.searchFn == nil {
 		return nil, nil
 	}
@@ -60,6 +69,54 @@ func (p *Plugin) Search(query string) (*provider.ResultSet, error) {
 		return nil, err
 	}
 	return &rs, nil
+}
+
+// ensureInitialized lazily initializes the Yaegi interpreter only when needed.
+func (p *Plugin) ensureInitialized() error {
+	p.mu.RLock()
+	if p.initialized {
+		p.mu.RUnlock()
+		return nil
+	}
+	p.mu.RUnlock()
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if p.initialized {
+		return nil
+	}
+
+	// Lazy load: read and evaluate script only when first searched
+	scriptData, err := os.ReadFile(p.scriptPath)
+	if err != nil {
+		return fmt.Errorf("failed to read script: %w", err)
+	}
+
+	i := interp.New(interp.Options{})
+	i.Use(stdlibSymbols)
+
+	if _, err := i.Eval(string(scriptData)); err != nil {
+		return fmt.Errorf("failed to evaluate script: %w", err)
+	}
+
+	// Get Search function
+	searchFn, err := i.Eval("Search")
+	if err != nil {
+		return fmt.Errorf("plugin must export 'Search' function: %w", err)
+	}
+
+	searchFunc, ok := searchFn.Interface().(func(string) string)
+	if !ok {
+		return fmt.Errorf("Search must be a function returning string")
+	}
+
+	p.interp = i
+	p.searchFn = searchFunc
+	p.initialized = true
+
+	return nil
 }
 
 // DefaultSuggestions implements provider.Provider.
@@ -123,35 +180,19 @@ func (m *Manager) Load(pluginPath string) error {
 	}
 
 	scriptPath := filepath.Join(pluginPath, manifest.Script)
-	scriptData, err := os.ReadFile(scriptPath)
-	if err != nil {
-		return fmt.Errorf("failed to read script: %w", err)
+
+	// Lazy loading: only validate script exists, don't load interpreter yet
+	if _, err := os.Stat(scriptPath); err != nil {
+		return fmt.Errorf("failed to stat script: %w", err)
 	}
 
-	i := interp.New(interp.Options{})
-	i.Use(stdlibSymbols)
-
-	if _, err := i.Eval(string(scriptData)); err != nil {
-		return fmt.Errorf("failed to evaluate script: %w", err)
-	}
-
-	// Get Search function directly
-	searchFn, err := i.Eval("Search")
-	if err != nil {
-		return fmt.Errorf("plugin must export 'Search' function: %w", err)
-	}
-
-	searchFunc, ok := searchFn.Interface().(func(string) string)
-	if !ok {
-		return fmt.Errorf("Search must be a function returning string")
-	}
-
+	// Create plugin with lazy initialization - interpreter loads on first Search()
 	pluginInstance := &Plugin{
-		Manifest: manifest,
-		Path:     pluginPath,
-		interp:   i,
-		searchFn: searchFunc,
-		trigger:  manifest.Trigger,
+		Manifest:    manifest,
+		Path:        pluginPath,
+		trigger:     manifest.Trigger,
+		scriptPath:  scriptPath,
+		initialized: false,
 	}
 
 	m.mu.Lock()
