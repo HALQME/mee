@@ -28,6 +28,10 @@ type Provider interface {
 	// Name returns the provider's name.
 	Name() string
 
+	// Trigger returns the trigger prefix for this provider.
+	// Returns empty string if no trigger (always active).
+	Trigger() string
+
 	// Search performs a search with the given query.
 	// Returns nil if the provider doesn't handle this query.
 	Search(query string) (*ResultSet, error)

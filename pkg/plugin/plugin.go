@@ -13,6 +13,9 @@ import (
 	"github.com/traefik/yaegi/stdlib"
 )
 
+// Shared stdlib symbols to reduce interpreter initialization cost.
+var stdlibSymbols = stdlib.Symbols
+
 // Manifest describes a plugin.
 type Manifest struct {
 	Name        string `json:"name"`
@@ -34,6 +37,11 @@ type Plugin struct {
 // Name returns the provider name.
 func (p *Plugin) Name() string {
 	return p.Manifest.Name
+}
+
+// Trigger returns the trigger prefix for this plugin.
+func (p *Plugin) Trigger() string {
+	return p.trigger
 }
 
 // Search implements provider.Provider.
@@ -121,7 +129,7 @@ func (m *Manager) Load(pluginPath string) error {
 	}
 
 	i := interp.New(interp.Options{})
-	i.Use(stdlib.Symbols)
+	i.Use(stdlibSymbols)
 
 	if _, err := i.Eval(string(scriptData)); err != nil {
 		return fmt.Errorf("failed to evaluate script: %w", err)
