@@ -1,0 +1,7 @@
+{
+  "name": "calc",
+  "version": "1.0.0",
+  "trigger": "",
+  "script": "calc.go",
+  "description": "Calculator"
+}

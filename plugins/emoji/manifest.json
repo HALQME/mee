@@ -1,0 +1,7 @@
+{
+  "name": "emoji",
+  "version": "1.0.0",
+  "trigger": "emoji:",
+  "script": "emoji.go",
+  "description": "Search and insert emoji"
+}

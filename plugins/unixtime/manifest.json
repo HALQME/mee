@@ -1,0 +1,7 @@
+{
+  "name": "unixtime",
+  "version": "1.0.0",
+  "trigger": "unix:",
+  "script": "unixtime.go",
+  "description": "Unix timestamp"
+}
