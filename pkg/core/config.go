@@ -38,7 +38,6 @@ func Load() Config {
 	}
 	if len(c.PluginDirs) == 0 {
 		c.PluginDirs = []string{
-			platform.ExecutableDir() + "/plugins",
 			platform.ConfigDir() + "/plugins",
 		}
 	}
@@ -49,7 +48,6 @@ func defaults() Config {
 	return Config{
 		Display: Display{MaxResults: 50, ListHeight: 15},
 		PluginDirs: []string{
-			platform.ExecutableDir() + "/plugins",
 			platform.ConfigDir() + "/plugins",
 			"/usr/local/share/mee/plugins",
 		},
