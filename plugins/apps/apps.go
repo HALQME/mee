@@ -33,12 +33,14 @@ func Search(query string) string {
 
 	var results []ResultItem
 	q := strings.ToLower(query)
+	queryLen := len(q)
 
 	for _, app := range apps {
-		if strings.Contains(strings.ToLower(app.name), q) {
+		lowerName := strings.ToLower(app.name)
+		if strings.Contains(lowerName, q) {
 			score := 50
-			if strings.HasPrefix(strings.ToLower(app.name), q) {
-				score = 80
+			if strings.HasPrefix(lowerName, q) {
+				score = 100 - (len(app.name) - queryLen)
 			}
 			results = append(results, ResultItem{
 				ID:       "app:" + app.path,
