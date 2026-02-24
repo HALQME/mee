@@ -10,8 +10,19 @@ import (
 
 // Config holds application settings.
 type Config struct {
-	Display    Display  `json:"display"`
-	PluginDirs []string `json:"plugin_dirs"`
+	Display    Display      `json:"display"`
+	PluginDirs []string     `json:"plugin_dirs"`
+	Colors     *ColorConfig `json:"colors,omitempty"`
+}
+
+// ColorConfig holds custom color settings.
+type ColorConfig struct {
+	Title string `json:"title,omitempty"`
+	Input string `json:"input,omitempty"`
+	Mark  string `json:"mark,omitempty"`
+	Item  string `json:"item,omitempty"`
+	Sub   string `json:"sub,omitempty"`
+	Help  string `json:"help,omitempty"`
 }
 
 // Display holds display settings.

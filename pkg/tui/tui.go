@@ -12,14 +12,63 @@ import (
 	"github.com/halqme/mee/pkg/provider"
 )
 
-var (
-	titleStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7C3AED")).Padding(0, 1)
-	inputStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Padding(0, 1)
-	selectStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#7C3AED")).Bold(true)
-	itemStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
-	subStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
-	helpStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
-)
+// styles holds the current styles.
+type styles struct {
+	title lipgloss.Style
+	input lipgloss.Style
+	mark  lipgloss.Style
+	item  lipgloss.Style
+	sub   lipgloss.Style
+	help  lipgloss.Style
+}
+
+// defaultStyles returns adaptive styles that follow terminal theme.
+func defaultStyles() styles {
+	return styles{
+		title: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.AdaptiveColor{Light: "#7C3AED", Dark: "#A78BFA"}).
+			Padding(0, 1),
+		input: lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"}).
+			Padding(0, 1),
+		mark: lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{Light: "#7C3AED", Dark: "#A78BFA"}).
+			Bold(true),
+		item: lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{Light: "#666666", Dark: "#888888"}),
+		sub: lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{Light: "#999999", Dark: "#666666"}),
+		help: lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{Light: "#999999", Dark: "#666666"}),
+	}
+}
+
+// applyColorConfig applies custom colors from config, preserving adaptive fallback.
+func applyColorConfig(s styles, cfg *core.ColorConfig) styles {
+	if cfg == nil {
+		return s
+	}
+	if cfg.Title != "" {
+		s.title = s.title.Foreground(lipgloss.Color(cfg.Title))
+	}
+	if cfg.Input != "" {
+		s.input = s.input.Foreground(lipgloss.Color(cfg.Input))
+	}
+	if cfg.Mark != "" {
+		s.mark = s.mark.Foreground(lipgloss.Color(cfg.Mark))
+	}
+	if cfg.Item != "" {
+		s.item = s.item.Foreground(lipgloss.Color(cfg.Item))
+	}
+	if cfg.Sub != "" {
+		s.sub = s.sub.Foreground(lipgloss.Color(cfg.Sub))
+	}
+	if cfg.Help != "" {
+		s.help = s.help.Foreground(lipgloss.Color(cfg.Help))
+	}
+	return s
+}
 
 // Model is the TUI model.
 type Model struct {
@@ -29,6 +78,7 @@ type Model struct {
 	results  []provider.ResultItem
 	selected int
 	config   core.Config
+	styles   styles
 	quitting bool
 }
 
@@ -39,11 +89,14 @@ func New(config core.Config, ranker *core.Ranker) Model {
 	ti.Focus()
 	ti.Width = 50
 
+	s := applyColorConfig(defaultStyles(), config.Colors)
+
 	return Model{
 		input:    ti,
 		viewport: viewport.New(60, config.Display.ListHeight),
 		ranker:   ranker,
 		config:   config,
+		styles:   s,
 	}
 }
 
@@ -98,11 +151,11 @@ func (m *Model) render() {
 	var b strings.Builder
 	for i, item := range m.results {
 		if i == m.selected {
-			b.WriteString(selectStyle.Render("▶ "+item.Title) + "\n")
+			b.WriteString(m.styles.mark.Render("▶ "+item.Title) + "\n")
 		} else {
-			b.WriteString(itemStyle.Render("  "+item.Title) + "\n")
+			b.WriteString(m.styles.item.Render("  "+item.Title) + "\n")
 		}
-		b.WriteString(subStyle.Render("    "+item.Subtitle) + "\n\n")
+		b.WriteString(m.styles.sub.Render("    "+item.Subtitle) + "\n\n")
 	}
 	m.viewport.SetContent(b.String())
 }
@@ -113,14 +166,14 @@ func (m Model) View() string {
 		return ""
 	}
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("mee") + "\n\n")
-	b.WriteString(inputStyle.Render(m.input.View()) + "\n\n")
+	b.WriteString(m.styles.title.Render("mee") + "\n\n")
+	b.WriteString(m.styles.input.Render(m.input.View()) + "\n\n")
 	if len(m.results) > 0 {
 		b.WriteString(m.viewport.View())
 	} else {
-		b.WriteString(itemStyle.Render("  No results..."))
+		b.WriteString(m.styles.item.Render("  No results..."))
 	}
-	b.WriteString("\n\n" + helpStyle.Render("↑↓ Nav  Tab Complete  ⏎ Select  ⎋ Quit"))
+	b.WriteString("\n\n" + m.styles.help.Render("↑↓ Nav  Tab Complete  ⏎ Select  ⎋ Quit"))
 	return b.String()
 }
 
