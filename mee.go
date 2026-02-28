@@ -9,8 +9,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/halqme/mee/cmd/mee/historycmd"
-	"github.com/halqme/mee/cmd/mee/plugincmd"
+	"github.com/halqme/mee/cmd/history"
+	"github.com/halqme/mee/cmd/plugin"
 	"github.com/halqme/mee/pkg/core"
 	"github.com/halqme/mee/pkg/database"
 	"github.com/halqme/mee/pkg/platform"
