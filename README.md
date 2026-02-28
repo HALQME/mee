@@ -19,6 +19,16 @@ go build -o mee ./mee.go
 
 ## Usage
 
+### Setup
+
+```bash
+# Initial setup with default plugins
+./mee setup --with-plugins
+
+# Check setup status
+./mee check
+```
+
 ### Interactive Mode
 
 ```bash
@@ -35,40 +45,105 @@ go build -o mee ./mee.go
 echo "100+50" | ./mee
 ```
 
+### Plugin Management
+
+```bash
+# Install plugin from GitHub
+./mee plugin add https://github.com/user/repo
+
+# List installed plugins
+./mee plugin list
+
+# Remove a plugin
+./mee plugin remove <plugin-name>
+
+# Enable/Disable a plugin
+./mee plugin enable <plugin-name>
+./mee plugin disable <plugin-name>
+
+# Update plugins
+./mee plugin update
+```
+
+### History Management
+
+```bash
+# Show recent history
+./mee history list
+
+# Search history
+./mee history search <query>
+
+# Show popular queries
+./mee history top
+
+# Clear history
+./mee history clear
+
+# Export/Import history
+./mee history export [file]
+./mee history import <file>
+```
+
 ### Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| `↑` `↓` | Navigate results |
-| `Tab` | Complete trigger |
-| `Enter` | Select item |
-| `Esc` / `Ctrl+C` | Quit |
+| Key              | Action           |
+| ---------------- | ---------------- |
+| `↑` `↓`          | Navigate results |
+| `Tab`            | Complete trigger |
+| `Enter`          | Select item      |
+| `Esc` / `Ctrl+C` | Quit             |
 
 ## Built-in Plugins
 
-| Plugin | Description | Trigger |
-|--------|-------------|---------|
-| apps | Launch applications | - |
-| calc | Calculator | - |
-| web | Web search | - |
-| emoji | Emoji search | - |
-| unixtime | Unix timestamp converter | - |
+| Plugin   | Description              | Trigger                         |
+| -------- | ------------------------ | ------------------------------- |
+| apps     | Launch applications      | -                               |
+| calc     | Calculator               | -                               |
+| rpn      | RPN Calculator           | -                               |
+| web      | Web search               | wiki:, g:, gh:, ddg:, yt:, so:, |
+| emoji    | Emoji search             | emoji:                          |
+| unixtime | Unix timestamp converter | unix:                           |
 
 ## Configuration
 
-Config file: `~/.config/mee/config.json`
+Config file: `~/.config/mee/config.yaml`
 
-```json
-{
-  "display": {
-    "max_results": 50,
-    "list_height": 15
-  },
-  "plugin_dirs": [
-    "/path/to/mee/plugins",
-    "~/.config/mee/plugins"
-  ]
-}
+```yaml
+app:
+  mode: interactive # "daemon" or "interactive"
+  startup: false # start on system startup
+  log_level: info # "debug", "info", "warn", "error"
+
+display:
+  theme: auto # "auto", "light", "dark"
+  max_results: 50
+  list_height: 15
+
+plugins:
+  dirs:
+    - ~/.config/mee/plugins
+    - /usr/local/share/mee/plugins
+  runtime_default: yaegi # "yaegi", "wasm", "native"
+
+search:
+  fuzzy_threshold: 0.7 # 0.0-1.0
+  history_boost: true # boost results by history
+
+storage:
+  db_path: ~/.local/share/mee/mee.db
+
+registry:
+  cache_dir: ~/.cache/mee/plugins
+
+# Optional custom colors
+colors:
+  title: "#00ff00"
+  input: "#ffffff"
+  mark: "#ff00ff"
+  item: "#cccccc"
+  sub: "#888888"
+  help: "#666666"
 ```
 
 ## Creating Plugins
@@ -85,11 +160,11 @@ plugins/myplugin/
 
 ```json
 {
-  "name": "myplugin",
-  "version": "1.0.0",
-  "trigger": ">",        // Optional: prefix to activate plugin
-  "script": "myplugin.go",
-  "description": "My custom plugin"
+	"name": "myplugin",
+	"version": "1.0.0",
+	"trigger": ">", // Optional: prefix to activate plugin
+	"script": "myplugin.go",
+	"description": "My custom plugin"
 }
 ```
 
@@ -148,12 +223,12 @@ func shouldHandle(query string) bool {
 
 ### Actions
 
-| Action | Description |
-|--------|-------------|
-| `open` / `launch` | Open URL or launch application |
-| `copy` | Copy payload to clipboard |
-| `print` | Print to stdout |
-| `trigger` | Activate another plugin trigger |
+| Action            | Description                     |
+| ----------------- | ------------------------------- |
+| `open` / `launch` | Open URL or launch application  |
+| `copy`            | Copy payload to clipboard       |
+| `print`           | Print to stdout                 |
+| `trigger`         | Activate another plugin trigger |
 
 ### Tips for Fast Plugins
 
@@ -165,16 +240,26 @@ func shouldHandle(query string) bool {
 
 ```
 mee.go                 # Entry point
+cmd/
+├── mee/
+│   ├── historycmd/    # History management commands
+│   └── plugincmd/    # Plugin management commands
 pkg/
 ├── core/
 │   ├── config.go      # Configuration loader
 │   └── ranker.go      # Search ranking with parallel execution
+├── database/
+│   ├── database.go    # SQLite database operations
+│   ├── history.go     # History data management
+│   └── plugin.go      # Plugin metadata storage
 ├── platform/
 │   └── platform.go    # OS-specific utilities
 ├── plugin/
 │   └── plugin.go      # Yaegi-based plugin manager
 ├── provider/
 │   └── provider.go    # Provider interface & fuzzy matching
+├── setup/
+│   └── setup.go       # Initial setup & installation
 └── tui/
     └── tui.go         # Terminal UI (Bubble Tea)
 plugins/               # Built-in plugins
@@ -185,6 +270,9 @@ plugins/               # Built-in plugins
 - **Parallel Execution**: All plugins search concurrently via goroutines
 - **Trigger Filtering**: Plugins with triggers only activate on matching prefixes
 - **Shared Symbols**: Interpreter stdlib symbols are shared across plugins
+- **Lazy Loading**: Plugins are only initialized when first searched
+- **Sandbox**: Configurable timeout and memory limits per plugin
+- **History Boost**: Frequently used results are ranked higher
 
 ## License
 
